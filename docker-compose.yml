@@ -1,0 +1,8 @@
+version: '2'
+services:
+
+    client:
+        image: sblio/cachet-client
+        build: .
+        env_file: .env
+

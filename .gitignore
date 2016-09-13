@@ -1,0 +1,5 @@
+.env
+*.swp
+config
+cachet-init.bk
+cachet-test.bk

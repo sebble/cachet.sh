@@ -1,0 +1,148 @@
+
+## Utility functions
+
+post() { curl -s -XPOST -H "Content-Type: application/json;" -H "X-Cachet-Token: $CACHET_TOKEN" -d "$2" $CACHET_API$1; }
+put() { curl -s -XPUT -H "Content-Type: application/json;" -H "X-Cachet-Token: $CACHET_TOKEN" -d "$2" $CACHET_API$1; }
+grepid() { egrep -o '"id":[0-9]+'|tr -cd '[0-9]'; }
+
+
+## API functions
+
+create_metric() {
+
+    NAME="${1:?}"
+    SUFFIX="${2-}"
+    DESCRIPTION="${3-}"
+    DEFAULT=${4:?}
+
+    post /metrics '{"name":"'"$NAME"'","suffix":"'"$SUFFIX"'","description":"'"$DESCRIPTION"'","default_value":'$DEFAULT'}' | grepid
+}
+
+post_metric() {
+
+    ID=${1:?}
+    VALUE=${2:?}
+    TIMESTAMP=${3-}
+    test -n "$3" && TIMESTAMP=',"timestamp":'$3
+
+    post /metrics/$ID/points '{"value":'$VALUE$TIMESTAMP'}' >/dev/null
+}
+
+create_component() {
+
+    NAME="${1:?}"
+    DESCRIPTION="${2-}"
+    STATUS="${3:-4}"
+    LINK="${4-}"
+    GROUP_ID="${5:-0}"
+
+    post /components '{"name":"'"$NAME"'","status":'$STATUS',"description":"'"$DESCRIPTION"'","link":"'"$LINK"'","group_id":'$GROUP_ID'}' | grepid
+}
+
+update_component() {
+
+    ID=${1:?}
+    STATUS=${2:?}
+
+    put /components/$ID '{"status":'$STATUS'}' >/dev/null
+}
+
+create_component_group() {
+
+    NAME="${1:?}"
+
+    post /components/groups '{"name":"'"$NAME"'"}' | grepid
+}
+
+
+## Management functions
+
+init() {
+
+    test -d "$1" && {
+        for f in $(ls "$1/"*.conf); do
+            (init "$1/$(basename $f)")
+        done
+        exit
+    }
+    
+    test -f "$1" || { exit 1; }
+
+    source "$1"
+
+    test -z "$METRIC_ID" && test -n "$METRIC_NAME" && {
+        echo "Create metric '$METRIC_NAME'..."
+        METRIC_ID=$(create_metric "$METRIC_NAME" "$METRIC_SUFFIX" "$METRIC_DESCRIPTION" "$METRIC_DEFAULT_VALUE")
+        echo "METRIC_ID=$METRIC_ID"
+    }
+
+    test -z "$COMPONENT_GROUP_ID" && test -n "$COMPONENT_GROUP_NAME" && {
+        echo "Create group '$COMPONENT_GROUP_NAME'..."
+        COMPONENT_GROUP_ID=$(create_component_group "$COMPONENT_GROUP_NAME")
+        echo "COMPONENT_GROUP_ID=$COMPONENT_GROUP_ID"
+    }
+
+    test -z "$COMPONENT_ID" && test -n "$COMPONENT_NAME" && {
+        echo "Create component '$COMPONENT_NAME'..."
+        COMPONENT_ID=$(create_component "$COMPONENT_NAME" "$COMPONENT_DESCRIPTION" "" "$COMPONENT_LINK" "$COMPONENT_GROUP_ID")
+        echo "COMPONENT_ID=$COMPONENT_ID"
+    }
+
+}
+
+config_test() {
+
+    set -x
+
+    test -d "$1" && {
+        for f in $(ls "$1/"*.conf); do
+            (config_test "$1/$(basename $f)")
+        done
+        exit
+    }
+
+    test -f "$1" || { exit 1; }
+
+    source "$1"
+
+    TEST_OUTPUT="$(eval $TEST)" && {
+        eval $ON_SUCCESS
+    } || {
+        $ON_ERROR
+    }
+
+}
+
+crontab_file() {
+
+    source "$1"
+    echo "* * * * * TEST_OUTPUT=\$($TEST) && { $ON_SUCCESS; } || { $ON_ERROR; }"
+
+}
+
+crontab() {
+
+    echo "## Usage: $0 $@ > /etc/cron.d/cachet-client"
+    echo "CACHET_TOKEN=$CACHET_TOKEN"
+    echo "CACHET_API=$CACHET_API"
+    echo "PATH=$PATH:$PWD"
+
+    test -d "$1" && {
+        for f in $(ls "$1/"*.conf); do
+            (crontab_file "$1/$(basename $f)")
+        done
+        exit
+    }
+
+    test -f "$1" || { exit 1; }
+
+    crontab_file "$1"
+
+}
+
+
+## Main
+
+FN=$(basename $0|cut -d- -f2-|tr - _)
+
+type $FN>/dev/null && $FN "$@"

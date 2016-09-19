@@ -23,7 +23,7 @@ Also included is a `docker-compose.yml` file which will set up an Alpine based i
     sudo cp cachet.sh /usr/local/bin/cachet
     sudo chmod +x /usr/local/bin/cachet
 
-### As a Docker container
+### As a Docker container [**recommended**]
 
 **Notice: image not built yet**
 

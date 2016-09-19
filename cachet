@@ -14,6 +14,13 @@ grepid() { egrep -o '"id":[0-9]+'|tr -cd '[0-9]'; }
 
 create_metric() {
 
+    test "$1" == "--help" && {
+        echo -e "Usage:\n    $FN name [suffix] [description] default_value"
+        echo -e "\nExamples:\n    $FN \"Main Site Response Time\" seconds \"\" 999"
+        echo -e "    $FN \"Some-service Uptime\" \"\" \"0: down; 1: up\" 0\n"
+        return 0
+    }
+
     NAME="${1:?}"
     SUFFIX="${2-}"
     DESCRIPTION="${3-}"
@@ -24,6 +31,13 @@ create_metric() {
 }
 
 post_metric() {
+
+    test "$1" == "--help" && {
+        echo -e "Usage:\n    $FN id value [timestamp]"
+        echo -e "\nExamples:\n    $FN 3 12.422"
+        echo -e "    $FN 5 1 1474298088\n"
+        return 0
+    }
 
     ID=${1:?}
     VALUE=${2:?}
@@ -138,6 +152,20 @@ config_test() {
 
 cronline() {
 
+    test "$1" == "--help" && {
+        echo -e "Usage:\n    $0 cronline INTERVAL [COMMAND]"
+        echo -e "\nExamples:\n    $0 cronline 1"
+        echo -e "    $0 cronline 60 echo Once per minute."
+        echo -e "    $0 cronline 300 echo Every 5 minutes."
+        echo -e "    $0 cronline 3600 echo Once per hour."
+        echo -e "    $0 cronline 86400 echo Once per day."
+        echo -e "    $0 cronline 2419200 echo Once per month."
+        echo -e "    $0 cronline 4838400 echo Every other month."
+        echo -e "    $0 cronline 29030400 echo Once per year."
+        echo
+        return 0
+    }
+
     INTERVAL=${1:?}; shift
 
     ## https://gist.github.com/sebble/3130cbb8e7c81181d8865fcfa33e428b#file-cronlines-sh
@@ -184,28 +212,93 @@ crontab_file() {
 
 crontab() {
 
+    test "$1" == "--help" && {
+        echo -e "Usage:\n    $0 crontab CONFIG_PATH [CONFIG_PATH ..]"
+        echo -e "\nExamples:\n    $0 crontab config.d/example.conf"
+        echo -e "    $0 crontab config.d"
+        echo -e "    $0 crontab config.d/*.conf extra,conf"
+        echo -e "    $0 crontab config.d | crontab -u cachet-shell-monitor -"
+        echo
+        return 0
+    }
+
     #echo "## Usage: $0 $@ >> /var/spool/cron/crontabs/root"
-    echo "## Usage: $0 $@ | crontab -"
     echo "CACHET_TOKEN=$CACHET_TOKEN"
     echo "CACHET_API=$CACHET_API"
     echo "PATH=$PATH:$PWD"
 
-    test -d "$1" && {
-        for f in $(ls "$1/"*.conf); do
-            (crontab_file "$1/$(basename $f)")
-        done
-        exit
-    }
+    for p in "$@"; do
+        test -d "$p" && {
+            for f in $(ls "$p/"*.conf); do
+                (crontab_file "$p/$(basename $f)")
+            done
+            continue
+        }
+        test -f "$p" && crontab_file "$p" || {
+            echo "Error reading file $p." >&2
+            exit 1
+        }
+    done
+}
 
-    test -f "$1" || { exit 1; }
+__install() {
 
-    crontab_file "$1"
+    INSTALL_PATH=${1:-/opt/cache/bin}
+    echo cp "$(dirname $0)/cachet" "$INSTALL_PATH/cachet"
+    echo chmod 755 "$INSTALL_PATH/cachet"
+    #echo ln -s cachet "$INSTALL_PATH/cachet-init"
+    #echo ln -s cachet "$INSTALL_PATH/cachet-crontab"
+    #echo ln -s cachet "$INSTALL_PATH/cachet-config-test"
+    #echo ln -s cachet "$INSTALL_PATH/cachet-post-metric"
+    #echo ln -s cachet "$INSTALL_PATH/cachet-update-component"
+    #echo ln -s cachet "$INSTALL_PATH/cachet-post-component-incident"
+    #echo ln -s cachet "$INSTALL_PATH/cachet-post-incident"
+    #echo mkdir -p /etc/cachet-shell-monitor.d
+    adduser --no-create-home cachet-shell-monitor
+}
 
+__help() {
+
+    echo "Usage:"
+    echo "    $0 --help"
+    echo "    $0 --install [path]"
+    echo "    $0 <action> --help"
+    echo "    $0 <action> [<action_arguments> ..]"
+    echo
+    echo "Actions:"
+    echo "    create-component NAME [DESCRIPTION] [STATUS] [LINK] [GROUP_ID]"
+    echo "    create-component-group NAME"
+    echo "    create-metric NAME [SUFFIX] [DESCRIPTION] DEFAULT_VALUE"
+    echo "    update-component ID STATUS"
+    echo "    post-metric ID VALUE [TIMESTAMP]"
+    echo "    post-incident NAME MESSAGE STATUS [VISIBLE] [COMPONENT_ID COMPONENT_STATUS] [NOTIFY]"
+    echo "    init CONFIG_PATH"
+    echo "    cronline INTERVAL [CRON_COMMAND]"
+    echo "    crontab CONFIG_PATH [CONFIG_PATH ..]"
+    echo
+    echo "Examples:"
+    echo "    sudo $0 --install /usr/local/bin"
+    echo "    export CACHET_API=https://status.example.com/api/v1"
+    echo "    export CACHET_TOKEN=8sjn12390vg34ma02nd"
+    echo "    vi config.d/example.conf"
+    echo "    cachet init config.d"
+    echo "    cachet crontab config.d | crontab -u cachet-shell-monitor -"
+    echo "    cachet update-component 1 2"
+    echo "    curl -s https://status.example.com/api/v1/components/1 | jq ."
+    echo
 }
 
 
 ## Main
 
-FN=$(basename $0|cut -d- -f2-|tr - _)
+test "$(basename $0)" == "cachet" && {
+    FN=$(echo $1|tr - _); shift
+} || {
+    FN=$(basename $0|cut -d- -f2-|tr - _)
+}
 
-type $FN>/dev/null && $FN "$@"
+type $FN &>/dev/null && $FN "$@" || {
+    echo "Error: Unknown action '$FN'" >&2
+    __help
+    exit 1
+}

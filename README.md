@@ -52,3 +52,4 @@ See `cachet --help` and `cachet <action> --help` for more examples.
     cachet update-component 1 2
     curl -s https://status.example.com/api/v1/components/1 | jq .
 
+See also: https://stedolan.github.io/jq/

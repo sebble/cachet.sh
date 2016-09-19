@@ -1,8 +1,10 @@
 # CachetHQ Shell Monitor
 
-The `cachet.sh` shell script in this repo provides simple commands to initialise and update a [Cachet](https://cachethq.io/) installation.
+The `cachet.sh` shell script in this repo provides simple commands to initialise and update a [Cachet](https://cachethq.io/) installation.  Use this script in your own shell commands to monitor anything you can monitor from your shell.
 
 Also included is a `docker-compose.yml` file which will set up an Alpine based image running cron to maintain your Cachet monitoring.
+
+The recommended usage is to configure your monitoring scripts then generate and install a crontab.  To keep this clean you may wish to run the cron daemon and monitoring scripts within a container.  An example Dockerfile is provided. 
 
 ## Installation
    

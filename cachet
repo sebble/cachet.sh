@@ -254,7 +254,7 @@ __install() {
     #echo ln -s cachet "$INSTALL_PATH/cachet-post-component-incident"
     #echo ln -s cachet "$INSTALL_PATH/cachet-post-incident"
     #echo mkdir -p /etc/cachet-shell-monitor.d
-    adduser --no-create-home cachet-shell-monitor
+    #adduser --no-create-home cachet-shell-monitor
 }
 
 __help() {
@@ -276,7 +276,7 @@ __help() {
     echo "    cronline INTERVAL [CRON_COMMAND]"
     echo "    crontab CONFIG_PATH [CONFIG_PATH ..]"
     echo
-    echo "Examples:"
+    echo "Example:"
     echo "    sudo $0 --install /usr/local/bin"
     echo "    export CACHET_API=https://status.example.com/api/v1"
     echo "    export CACHET_TOKEN=8sjn12390vg34ma02nd"
@@ -290,6 +290,12 @@ __help() {
 
 
 ## Main
+
+#SHELL_API=$CACHET_API
+#SHELL_TOKEN=$CACHET_TOKEN
+#test -f ~/.cachet-shell-monitor && source ~/.cachet-shell-monitor
+#CACHET_API=${SHELL_API:-CACHET_API}
+#CACHET_TOKEN=${SHELL_TOKEN:-CACHET_TOKEN}
 
 test "$(basename $0)" == "cachet" && {
     FN=$(echo $1|tr - _); shift

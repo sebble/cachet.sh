@@ -88,7 +88,7 @@ init() {
         done
         exit
     }
-    
+
     test -f "$1" || { exit 1; }
 
     source "$1"
@@ -136,9 +136,48 @@ config_test() {
 
 }
 
+cronline() {
+
+    INTERVAL=${1:?}; shift
+
+    ## https://gist.github.com/sebble/3130cbb8e7c81181d8865fcfa33e428b#file-cronlines-sh
+    test $INTERVAL -lt 60 && {
+        echo "* * * * * $@"
+        return 0
+    }
+
+    test $INTERVAL -lt 3600 && {
+        MINUTES=$(($INTERVAL/60))
+        echo "*/$MINUTES * * * * $@"
+        return 0
+    }
+
+    test $INTERVAL -lt 86400 && {
+        HOURS=$(($INTERVAL/3600))
+        echo "0 */$HOURS * * * $@"
+        return 0
+    }
+
+    test $INTERVAL -lt 2419200 && {
+        DAYS=$(($INTERVAL/86400))
+        echo "0 0 */$DAYS * * $@"
+        return 0
+    }
+
+    test $INTERVAL -lt 29030400 && {
+        MONTHS=$(($INTERVAL/2419200))
+        echo "0 0 1 */$MONTHS * $@"
+        return 0
+    }
+
+    echo "0 0 1 1 * $@"
+}
+
 crontab_file() {
 
     source "$1"
+    test -z "$CRON" && test -n "$INTERVAL" && test "$INTERVAL" =~ '^[0-9]+$' && CRON="$(cronline $INTERVAL)"
+    : ${CRON:?}
     echo "$CRON TEST_OUTPUT=\$($TEST) && { $ON_SUCCESS; } || { $ON_ERROR; }"
 
 }

@@ -1,4 +1,4 @@
-# CachetHQ Shell Monitor
+# CachetHQ Shell-based Monitor
 
 The `cachet.sh` shell script in this repo provides simple commands to initialise and update a [Cachet](https://cachethq.io/) installation.  Use this script in your own shell commands to monitor anything you can monitor from your shell.
 

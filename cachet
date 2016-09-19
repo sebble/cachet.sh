@@ -5,6 +5,10 @@ post() { curl -s -XPOST -H "Content-Type: application/json;" -H "X-Cachet-Token:
 put() { curl -s -XPUT -H "Content-Type: application/json;" -H "X-Cachet-Token: $CACHET_TOKEN" -d "$2" $CACHET_API$1; }
 grepid() { egrep -o '"id":[0-9]+'|tr -cd '[0-9]'; }
 
+#posti() { curl -s -XPOST -H "Content-Type: application/json;" -H "X-Cachet-Token: $CACHET_TOKEN" -d @- $CACHET_API$1; }
+#puti() { curl -s -XPUT -H "Content-Type: application/json;" -H "X-Cachet-Token: $CACHET_TOKEN" -d @- $CACHET_API$1; }
+#grepidi() { jq .data.id; }
+
 
 ## API functions
 
@@ -16,6 +20,7 @@ create_metric() {
     DEFAULT=${4:?}
 
     post /metrics '{"name":"'"$NAME"'","suffix":"'"$SUFFIX"'","description":"'"$DESCRIPTION"'","default_value":'$DEFAULT'}' | grepid
+    #jq -nc '{name:env.NAME,suffix:env.SUFFIX,description:env.DESCRIPTION,default_value:env.DEFAULT|tonumber}' | posti /metrics | grepid
 }
 
 post_metric() {
@@ -26,6 +31,7 @@ post_metric() {
     test -n "$3" && TIMESTAMP=',"timestamp":'$3
 
     post /metrics/$ID/points '{"value":'$VALUE$TIMESTAMP'}' >/dev/null
+    #jq -nc '{value:env.VALUE|tonumber,timestamp:env.TIMESTAMP|tonumber}|del(..|select(.==""))' | posti /metrics/$ID/points >/dev/null
 }
 
 create_component() {
@@ -37,6 +43,7 @@ create_component() {
     GROUP_ID="${5:-0}"
 
     post /components '{"name":"'"$NAME"'","status":'$STATUS',"description":"'"$DESCRIPTION"'","link":"'"$LINK"'","group_id":'$GROUP_ID'}' | grepid
+    #jq -nc '{name:env.NAME,status:env.STATUS|tonumber,description:env.DESCRIPTION,link:env.LINK,group_id:env.GROUP_ID|tonumber}' | posti /components | grepid
 }
 
 update_component() {
@@ -45,6 +52,7 @@ update_component() {
     STATUS=${2:?}
 
     put /components/$ID '{"status":'$STATUS'}' >/dev/null
+    #jq -nc '{status:env.STATUS|tonumber}' | puti /components/$ID >/dev/null
 }
 
 create_component_group() {
@@ -52,6 +60,21 @@ create_component_group() {
     NAME="${1:?}"
 
     post /components/groups '{"name":"'"$NAME"'"}' | grepid
+    #jq -nc '{name:env.NAME}' | posti /components/groups | grepid
+}
+
+post_component_incident() {
+
+    NAME="${1:?}"
+    MESSAGE="${2:?}"
+    STATUS=${3:?}
+    VISIBLE=${4:-0}
+    COMPONENT_ID=${5:?}
+    COMPONENT_STATUS=${6:?}
+    NOTIFY="${7:-false}"
+
+    post /incidents '{"name":"'"$NAME"'","message":"'"$MESSAGE"'","status":'$STATUS',"visible":'$VISIBLE',"component_id":'$COMPONENT_ID',"component_status":'$COMPONENT_STATUS',"notify":'$NOTIFY'}' | grepid
+    #jq -nc '{name:env.NAME,message:env.MESSAGE,status:env.STATUS|tonumber,visible:env.VISIBLE|tonumber,component_id:env.COMPONENT_ID|tonumber,component_status:env.COMPONENT_STATUS|tonumber,notify:(env.NOTIFY=="true")}' | posti /incidents | grepid
 }
 
 
@@ -116,13 +139,14 @@ config_test() {
 crontab_file() {
 
     source "$1"
-    echo "* * * * * TEST_OUTPUT=\$($TEST) && { $ON_SUCCESS; } || { $ON_ERROR; }"
+    echo "$CRON TEST_OUTPUT=\$($TEST) && { $ON_SUCCESS; } || { $ON_ERROR; }"
 
 }
 
 crontab() {
 
-    echo "## Usage: $0 $@ > /etc/cron.d/cachet-client"
+    #echo "## Usage: $0 $@ >> /var/spool/cron/crontabs/root"
+    echo "## Usage: $0 $@ | crontab -"
     echo "CACHET_TOKEN=$CACHET_TOKEN"
     echo "CACHET_API=$CACHET_API"
     echo "PATH=$PATH:$PWD"

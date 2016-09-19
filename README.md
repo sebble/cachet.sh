@@ -43,12 +43,12 @@ Also included is a `docker-compose.yml` file which will set up an Alpine based i
 
 See `cachet --help` and `cachet <action> --help` for more examples.
 
-    sudo /usr/local/bin/cachet --install /usr/local/bin$
-    export CACHET_API=https://status.example.com/api/v1$
-    export CACHET_TOKEN=8sjn12390vg34ma02nd$
-    vi config.d/example.conf$
-    cachet init config.d$
-    cachet crontab config.d | crontab -u cachet-shell-monitor -$
-    cachet update-component 1 2$
-    curl -s https://status.example.com/api/v1/components/1 | jq .$
+    sudo /usr/local/bin/cachet --install /usr/local/bin
+    export CACHET_API=https://status.example.com/api/v1
+    export CACHET_TOKEN=8sjn12390vg34ma02nd
+    vi config.d/example.conf
+    cachet init config.d
+    cachet crontab config.d | crontab -u cachet-shell-monitor -
+    cachet update-component 1 2
+    curl -s https://status.example.com/api/v1/components/1 | jq .
 
